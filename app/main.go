@@ -24,7 +24,7 @@ func main() {
 		case "exit":
 			os.Exit(1)
 		case "echo":
-			fmt.Println(strings.Join(splitCommand[1:], ""))
+			fmt.Println(strings.Join(splitCommand[1:], " "))
 		default:
 			fmt.Println(keyword + ": command not found")
 		}
