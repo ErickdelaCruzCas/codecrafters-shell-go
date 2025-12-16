@@ -22,7 +22,7 @@ func main() {
 
 		switch keyword {
 		case "exit":
-			os.Exit(1)
+			os.Exit(0)
 		case "echo":
 			fmt.Println(strings.Join(splitCommand[1:], " "))
 		default:
