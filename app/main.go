@@ -7,18 +7,7 @@ import (
 	"strings"
 )
 
-func printPrompt() {
-	fmt.Fprint(os.Stdout, "$ ")
-}
-
 func main() {
-	for {
-		printPrompt()
-		handleInput()
-	}
-}
-
-func handleInput() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("$ ")
@@ -40,5 +29,4 @@ func handleInput() {
 			fmt.Println(keyword + ": command not found")
 		}
 	}
-
 }
