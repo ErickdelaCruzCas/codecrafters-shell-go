@@ -37,7 +37,6 @@ func handleInput() {
 		case "echo":
 			fmt.Println(splitCommand[1])
 		default:
-			// By default some CLI tools return only the keyword
 			fmt.Println(keyword + ": command not found")
 		}
 	}
