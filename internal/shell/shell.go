@@ -56,6 +56,18 @@ func (s *Shell) Run() {
 
 		cmd, ok := s.commands[name]
 		if !ok {
+			path, ok := s.IsExecutable(name)
+			if ok {
+				externalCmd := exec.CommandContext(ctx, path, args...)
+				externalCmd.Stdin = os.Stdin
+				externalCmd.Stdout = os.Stdout
+				externalCmd.Stderr = os.Stderr
+				if err := externalCmd.Run(); err != nil {
+					fmt.Println(err)
+				}
+				continue
+			}
+
 			fmt.Println(name + ": command not found")
 			continue
 		}
