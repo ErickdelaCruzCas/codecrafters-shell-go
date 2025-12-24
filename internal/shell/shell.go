@@ -59,6 +59,7 @@ func (s *Shell) Run() {
 			path, ok := s.IsExecutable(name)
 			if ok {
 				externalCmd := exec.CommandContext(ctx, path, args...)
+				externalCmd.Args[0] = name
 				externalCmd.Stdin = os.Stdin
 				externalCmd.Stdout = os.Stdout
 				externalCmd.Stderr = os.Stderr
