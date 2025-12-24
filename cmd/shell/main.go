@@ -12,6 +12,6 @@
 // 	}
 
 // 	sh := shell.New(commands)
-// 	commands["type"] = command.NewTypeCommand(sh.IsBuiltin)
+// 	commands["type"] = command.NewTypeCommand(sh.IsBuiltin, sh.IsExecutable)
 // 	sh.Run()
 // }

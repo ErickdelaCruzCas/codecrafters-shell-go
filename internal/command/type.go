@@ -6,12 +6,17 @@ import (
 )
 
 type TypeCommand struct {
-	isBuiltin func(string) bool
+	isBuiltin    func(string) bool
+	isExecutable func(string) (string, bool)
 }
 
-func NewTypeCommand(isBuiltin func(string) bool) TypeCommand {
+func NewTypeCommand(
+	isBuiltin func(string) bool,
+	isExecutable func(string) (string, bool),
+) TypeCommand {
 	return TypeCommand{
-		isBuiltin: isBuiltin,
+		isBuiltin:    isBuiltin,
+		isExecutable: isExecutable,
 	}
 }
 
@@ -28,6 +33,12 @@ func (c TypeCommand) Execute(ctx context.Context, args []string) Result {
 
 	if c.isBuiltin(name) {
 		fmt.Printf("%s is a shell builtin\n", name)
+		return Ok
+	}
+
+	path, ok := c.isExecutable(name)
+	if ok {
+		fmt.Printf("%s is %s\n", name, path)
 		return Ok
 	}
 

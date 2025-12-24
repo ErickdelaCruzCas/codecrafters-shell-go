@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -25,6 +26,14 @@ func New(commands map[string]command.Command) *Shell {
 func (s *Shell) IsBuiltin(name string) bool {
 	_, ok := s.commands[name]
 	return ok
+}
+
+func (s *Shell) IsExecutable(name string) (string, bool) {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return "", false
+	}
+	return path, true
 }
 
 func (s *Shell) Run() {
