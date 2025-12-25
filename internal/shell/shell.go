@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
@@ -53,10 +52,10 @@ func (s *Shell) Run() {
 		}
 
 		line := scanner.Text()
-		parts := strings.Split(line, " ")
+		tokens := tokenizer(line)
 
-		name := parts[0]
-		args := parts[1:]
+		name := tokens[0]
+		args := tokens[1:]
 
 		cmd, ok := s.commands[name]
 		if !ok {
@@ -88,4 +87,38 @@ func (s *Shell) Run() {
 			fmt.Println("command error")
 		}
 	}
+}
+
+func tokenizer(line string) []string {
+	tokens := []string{}
+	var token string
+	betweenQuotes := false
+	for _, ch := range line {
+
+		// 1️⃣ Comilla: abre o cierra modo quoted
+		if ch == '\'' {
+			betweenQuotes = !betweenQuotes
+			continue
+		}
+
+		// 2️⃣ Espacio fuera de comillas: cierra token
+		if ch == ' ' && !betweenQuotes {
+			if token != "" {
+				tokens = append(tokens, token)
+				token = ""
+			}
+			continue
+		}
+
+		// 3️⃣ Cualquier otro carácter
+		token += string(ch)
+
+	}
+
+	// 4️⃣ Añadir último token si existe
+	if token != "" {
+		tokens = append(tokens, token)
+	}
+
+	return tokens
 }
