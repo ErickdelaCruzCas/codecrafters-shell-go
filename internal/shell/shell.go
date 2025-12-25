@@ -36,6 +36,10 @@ func (s *Shell) IsExecutable(name string) (string, bool) {
 	return path, true
 }
 
+func (s *Shell) ChangeDir(path string) error {
+	return os.Chdir(path)
+}
+
 func (s *Shell) Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
