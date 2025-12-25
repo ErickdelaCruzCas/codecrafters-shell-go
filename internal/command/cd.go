@@ -3,6 +3,8 @@ package command
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 )
 
 type CdCommand struct {
@@ -27,6 +29,10 @@ func (c CdCommand) Execute(ctx context.Context, args []string) Result {
 	}
 
 	path := args[0]
+	if strings.HasPrefix(path, "~") {
+		home, _ := os.UserHomeDir()
+		path = home + path[1:]
+	}
 
 	if err := c.changeDir(path); err != nil {
 		fmt.Printf("cd: %s: No such file or directory\n", path)
