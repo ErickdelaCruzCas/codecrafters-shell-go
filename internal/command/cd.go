@@ -29,8 +29,8 @@ func (c CdCommand) Execute(ctx context.Context, args []string) Result {
 	path := args[0]
 
 	if err := c.changeDir(path); err != nil {
-		fmt.Println(err)
-		return Error
+		fmt.Printf("cd: %s: No such file or directory\n", path)
+		return Ok
 	}
 
 	return Ok
