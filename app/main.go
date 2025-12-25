@@ -9,6 +9,7 @@ func main() {
 	commands := map[string]command.Command{
 		"exit": command.ExitCommand{},
 		"echo": command.EchoCommand{},
+		"pwd":  command.PwdCommand{},
 	}
 
 	sh := shell.New(commands)

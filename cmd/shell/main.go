@@ -9,9 +9,12 @@
 // 	commands := map[string]command.Command{
 // 		"exit": command.ExitCommand{},
 // 		"echo": command.EchoCommand{},
+// 		"pwd":  command.PwdCommand{},
 // 	}
 
 // 	sh := shell.New(commands)
+
 // 	commands["type"] = command.NewTypeCommand(sh.IsBuiltin, sh.IsExecutable)
+
 // 	sh.Run()
 // }
