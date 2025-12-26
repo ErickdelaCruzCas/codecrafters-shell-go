@@ -128,7 +128,7 @@ func (*Shell) executeExternal(ctx context.Context, path string, args []string, n
 	externalCmd.Stdout = os.Stdout
 	externalCmd.Stderr = os.Stderr
 	if err := externalCmd.Run(); err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
 	}
 }
 
