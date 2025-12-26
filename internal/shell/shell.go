@@ -218,7 +218,8 @@ func parseRedirect(tokens []string) (cmd string, args []string, redir Redirect, 
 	cmd = tokens[0]
 
 	for i := 1; i < len(tokens); i++ {
-		if tokens[i] == ">" {
+		if tokens[i] == ">" || tokens[i] == "1>" {
+
 			if i+1 >= len(tokens) {
 				return "", nil, redir, fmt.Errorf("syntax error near >")
 			}
