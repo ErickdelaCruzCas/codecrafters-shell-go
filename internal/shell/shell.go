@@ -16,6 +16,10 @@ type Shell struct {
 	commands map[string]command.Command
 }
 
+type Redirect struct {
+	Stdout string
+}
+
 func New(commands map[string]command.Command) *Shell {
 	return &Shell{
 		commands: commands,
@@ -57,17 +61,39 @@ func (s *Shell) Run() {
 		name := tokens[0]
 		args := tokens[1:]
 
+		name, args, redir, err := parseRedirect(tokens)
+
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		var (
+			oldStdout *os.File
+			outFile   *os.File
+		)
+
+		if redir.Stdout != "" {
+			outFile, err = os.Create(redir.Stdout)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			oldStdout = os.Stdout
+			os.Stdout = outFile
+		}
+
 		cmd, ok := s.commands[name]
 		if !ok {
+
 			path, ok := s.IsExecutable(name)
 			if ok {
-				externalCmd := exec.CommandContext(ctx, path, args...)
-				externalCmd.Args[0] = name
-				externalCmd.Stdin = os.Stdin
-				externalCmd.Stdout = os.Stdout
-				externalCmd.Stderr = os.Stderr
-				if err := externalCmd.Run(); err != nil {
-					fmt.Println(err)
+				// Aqui se ejecuta el external
+				s.executeExternal(ctx, path, args, name)
+				// restaurar stdout
+				if outFile != nil {
+					os.Stdout = oldStdout
+					outFile.Close()
 				}
 				continue
 			}
@@ -76,7 +102,13 @@ func (s *Shell) Run() {
 			continue
 		}
 
+		// aquí el built in
 		result := cmd.Execute(ctx, args)
+
+		if outFile != nil {
+			os.Stdout = oldStdout
+			outFile.Close()
+		}
 
 		switch result {
 		case command.Ok:
@@ -86,6 +118,17 @@ func (s *Shell) Run() {
 		case command.Error:
 			fmt.Println("command error")
 		}
+	}
+}
+
+func (*Shell) executeExternal(ctx context.Context, path string, args []string, name string) {
+	externalCmd := exec.CommandContext(ctx, path, args...)
+	externalCmd.Args[0] = name
+	externalCmd.Stdin = os.Stdin
+	externalCmd.Stdout = os.Stdout
+	externalCmd.Stderr = os.Stderr
+	if err := externalCmd.Run(); err != nil {
+		fmt.Println(err)
 	}
 }
 
@@ -165,4 +208,25 @@ func tokenizer(line string) []string {
 	}
 
 	return tokens
+}
+
+func parseRedirect(tokens []string) (cmd string, args []string, redir Redirect, err error) {
+	if len(tokens) == 0 {
+		return "", nil, redir, nil
+	}
+
+	cmd = tokens[0]
+
+	for i := 1; i < len(tokens); i++ {
+		if tokens[i] == ">" {
+			if i+1 >= len(tokens) {
+				return "", nil, redir, fmt.Errorf("syntax error near >")
+			}
+			redir.Stdout = tokens[i+1]
+			return cmd, args, redir, nil
+		}
+		args = append(args, tokens[i])
+	}
+
+	return cmd, args, redir, nil
 }
