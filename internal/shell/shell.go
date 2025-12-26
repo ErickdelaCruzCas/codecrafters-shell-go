@@ -98,6 +98,8 @@ func tokenizer(line string) []string {
 	)
 
 	state := normal
+	prevState := normal
+
 	var tokens []string
 	var token string
 
@@ -115,6 +117,9 @@ func tokenizer(line string) []string {
 				state = singleQuote
 			case '"':
 				state = doubleQuote
+			case '\\':
+				prevState = normal
+				state = escape
 			default:
 				token += string(ch)
 			}
@@ -127,17 +132,19 @@ func tokenizer(line string) []string {
 			}
 
 		case doubleQuote:
-			if ch == '\\' {
-				state = escape
-			} else if ch == '"' {
+			switch ch {
+			case '"':
 				state = normal
-			} else {
+			case '\\':
+				prevState = doubleQuote
+				state = escape
+			default:
 				token += string(ch)
 			}
+
 		case escape:
-			// el carácter escapado se añade tal cual
 			token += string(ch)
-			state = doubleQuote
+			state = prevState
 		}
 	}
 
