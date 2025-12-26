@@ -143,9 +143,19 @@ func tokenizer(line string) []string {
 			}
 
 		case escape:
-			// CLAVE: el carácter escapado se añade siempre,
-			// incluso si es un espacio
-			token += string(ch)
+			if prevState == doubleQuote {
+				// Dentro de comillas dobles:
+				// solo ciertos escapes eliminan el backslash
+				switch ch {
+				case '"', '\\', ' ':
+					token += string(ch)
+				default:
+					token += "\\" + string(ch)
+				}
+			} else {
+				// Fuera de comillas: el backslash siempre desaparece
+				token += string(ch)
+			}
 			state = prevState
 		}
 	}
