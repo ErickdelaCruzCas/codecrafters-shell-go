@@ -143,9 +143,27 @@ func tokenizer(line string) []string {
 			}
 
 		case escape:
-			token += string(ch)
-			state = prevState
-		}
+			switch ch {
+				case 'n':
+					token += "\n"
+				case 't':
+					token += "\t"
+				case '\\':
+					token += "\\"
+				case '"':
+					token += "\""
+				case '\'':
+					token += "'"
+				default:
+					// octal \NN (solo si ch es dígito)
+					if ch >= '0' && ch <= '7' {
+						val := int(ch - '0')
+						token += string(rune(val))
+					} else {
+						token += string(ch)
+					}
+	}
+	state = prevState
 	}
 
 	if token != "" {
