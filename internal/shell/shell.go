@@ -94,6 +94,7 @@ func tokenizer(line string) []string {
 		normal = iota
 		singleQuote
 		doubleQuote
+		escape
 	)
 
 	state := normal
@@ -126,11 +127,17 @@ func tokenizer(line string) []string {
 			}
 
 		case doubleQuote:
-			if ch == '"' {
+			if ch == '\\' {
+				state = escape
+			} else if ch == '"' {
 				state = normal
 			} else {
 				token += string(ch)
 			}
+		case escape:
+			// el carácter escapado se añade tal cual
+			token += string(ch)
+			state = doubleQuote
 		}
 	}
 
