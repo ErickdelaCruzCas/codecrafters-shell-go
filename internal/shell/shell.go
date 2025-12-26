@@ -92,17 +92,25 @@ func (s *Shell) Run() {
 func tokenizer(line string) []string {
 	tokens := []string{}
 	var token string
-	singleQuotes := false
+	inSingleQuote := false
+	inDoubleQuote := false
+
 	for _, ch := range line {
 
-		// 1️⃣ Comilla: abre o cierra modo quoted
-		if ch == '\'' {
-			singleQuotes = !singleQuotes
+		// 1️⃣ Single quote: toggle single quote mode (unless inside double quotes)
+		if ch == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
 			continue
 		}
 
-		// 2️⃣ Espacio fuera de comillas: cierra token
-		if ch == ' ' && !singleQuotes {
+		// 2️⃣ Double quote: toggle double quote mode (unless inside single quotes)
+		if ch == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+			continue
+		}
+
+		// 3️⃣ Space outside quotes: ends current token
+		if ch == ' ' && !inSingleQuote && !inDoubleQuote {
 			if token != "" {
 				tokens = append(tokens, token)
 				token = ""
@@ -110,12 +118,12 @@ func tokenizer(line string) []string {
 			continue
 		}
 
-		// 3️⃣ Cualquier otro carácter
+		// 4️⃣ Any other character (including quotes inside the opposite quote type)
 		token += string(ch)
 
 	}
 
-	// 4️⃣ Añadir último token si existe
+	// 5️⃣ Add last token if it exists
 	if token != "" {
 		tokens = append(tokens, token)
 	}
