@@ -108,6 +108,9 @@ func tokenizer(line string) []string {
 
 		case normal:
 			switch ch {
+			case '\\':
+				prevState = normal
+				state = escape
 			case ' ':
 				if token != "" {
 					tokens = append(tokens, token)
@@ -117,9 +120,6 @@ func tokenizer(line string) []string {
 				state = singleQuote
 			case '"':
 				state = doubleQuote
-			case '\\':
-				prevState = normal
-				state = escape
 			default:
 				token += string(ch)
 			}
@@ -133,38 +133,21 @@ func tokenizer(line string) []string {
 
 		case doubleQuote:
 			switch ch {
-			case '"':
-				state = normal
 			case '\\':
 				prevState = doubleQuote
 				state = escape
+			case '"':
+				state = normal
 			default:
 				token += string(ch)
 			}
 
 		case escape:
-			switch ch {
-			case 'n':
-				token += "\n"
-			case 't':
-				token += "\t"
-			case '\\':
-				token += "\\"
-			case '"':
-				token += "\""
-			case '\'':
-				token += "'"
-			default:
-				// octal \NN (solo si ch es dígito)
-				if ch >= '0' && ch <= '7' {
-					val := int(ch - '0')
-					token += string(rune(val))
-				} else {
-					token += string(ch)
-				}
-			}
+			// CLAVE: el carácter escapado se añade siempre,
+			// incluso si es un espacio
+			token += string(ch)
+			state = prevState
 		}
-		state = prevState
 	}
 
 	if token != "" {
