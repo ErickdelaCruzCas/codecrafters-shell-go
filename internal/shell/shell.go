@@ -257,7 +257,7 @@ func parseRedirect(tokens []string) (cmd string, args []string, redir Redirect, 
 			redir.Stderr = tokens[i+1]
 			i++ // saltar el filename
 
-		case ">>":
+		case ">>", "1>>":
 			if i+1 >= len(tokens) {
 				return "", nil, redir, fmt.Errorf("syntax error near >>")
 			}
