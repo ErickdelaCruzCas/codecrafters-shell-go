@@ -48,6 +48,7 @@ func (s *Shell) ChangeDir(path string) error {
 func (s *Shell) Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -60,16 +61,13 @@ func (s *Shell) Run() {
 		line := scanner.Text()
 		tokens := tokenizer(line)
 
-		name := tokens[0]
-		args := tokens[1:]
-
 		name, args, redir, err := parseRedirect(tokens)
-
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
+		// ---- preparación de redirecciones ----
 		var (
 			oldStdout *os.File
 			oldStderr *os.File
@@ -77,15 +75,15 @@ func (s *Shell) Run() {
 			errFile   *os.File
 		)
 
-		flags := os.O_CREATE | os.O_WRONLY
-		if redir.StdoutAppend {
-			flags |= os.O_APPEND
-		} else {
-			flags |= os.O_TRUNC
-		}
-
 		if redir.Stdout != "" {
-			outFile, err := os.OpenFile(redir.Stdout, flags, 0644)
+			flags := os.O_CREATE | os.O_WRONLY
+			if redir.StdoutAppend {
+				flags |= os.O_APPEND
+			} else {
+				flags |= os.O_TRUNC
+			}
+
+			outFile, err = os.OpenFile(redir.Stdout, flags, 0644)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -95,7 +93,6 @@ func (s *Shell) Run() {
 		}
 
 		if redir.Stderr != "" {
-
 			errFile, err = os.Create(redir.Stderr)
 			if err != nil {
 				fmt.Println(err)
@@ -109,49 +106,32 @@ func (s *Shell) Run() {
 			os.Stderr = errFile
 		}
 
-		cmd, ok := s.commands[name]
-		if !ok {
+		// ---- ejecución ----
+		shouldExit := false
 
-			path, ok := s.IsExecutable(name)
-			if ok {
-				// Aqui se ejecuta el external
-				s.executeExternal(ctx, path, args, name)
-				// restaurar stdout
-				if outFile != nil {
-					os.Stdout = oldStdout
-					outFile.Close()
-				}
-				if errFile != nil {
-					os.Stderr = oldStderr
-					errFile.Close()
-				}
-				continue
+		if cmd, ok := s.commands[name]; ok {
+			result := cmd.Execute(ctx, args)
+			if result == command.Exit {
+				shouldExit = true
 			}
-
+		} else if path, ok := s.IsExecutable(name); ok {
+			s.executeExternal(ctx, path, args, name)
+		} else {
 			fmt.Println(name + ": command not found")
-			continue
 		}
 
-		// aquí el built in
-		result := cmd.Execute(ctx, args)
-
+		// ---- RESTORE SIEMPRE ----
+		if errFile != nil {
+			os.Stderr = oldStderr
+			errFile.Close()
+		}
 		if outFile != nil {
 			os.Stdout = oldStdout
 			outFile.Close()
 		}
 
-		if errFile != nil {
-			os.Stderr = oldStderr
-			errFile.Close()
-		}
-
-		switch result {
-		case command.Ok:
-			// continuar
-		case command.Exit:
+		if shouldExit {
 			return
-		case command.Error:
-			fmt.Println("command error")
 		}
 	}
 }
