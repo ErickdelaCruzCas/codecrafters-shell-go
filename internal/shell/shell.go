@@ -20,6 +20,7 @@ type Redirect struct {
 	Stdout       string
 	StdoutAppend bool
 	Stderr       string
+	StderrAppend bool
 }
 
 func New(commands map[string]command.Command) *Shell {
@@ -93,7 +94,14 @@ func (s *Shell) Run() {
 		}
 
 		if redir.Stderr != "" {
-			errFile, err = os.Create(redir.Stderr)
+			flags := os.O_CREATE | os.O_WRONLY
+			if redir.StderrAppend {
+				flags |= os.O_APPEND
+			} else {
+				flags |= os.O_TRUNC
+			}
+
+			errFile, err = os.OpenFile(redir.Stderr, flags, 0644)
 			if err != nil {
 				fmt.Println(err)
 				if outFile != nil {
@@ -255,6 +263,14 @@ func parseRedirect(tokens []string) (cmd string, args []string, redir Redirect, 
 			}
 			redir.Stdout = tokens[i+1]
 			redir.StdoutAppend = true
+			i++
+
+		case "2>>":
+			if i+1 >= len(tokens) {
+				return "", nil, redir, fmt.Errorf("syntax error near 2>>")
+			}
+			redir.Stderr = tokens[i+1]
+			redir.StderrAppend = true
 			i++
 
 		default:
