@@ -121,6 +121,10 @@ func (s *Shell) Run() {
 					os.Stdout = oldStdout
 					outFile.Close()
 				}
+				if errFile != nil {
+					os.Stderr = oldStderr
+					errFile.Close()
+				}
 				continue
 			}
 
