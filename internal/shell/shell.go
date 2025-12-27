@@ -18,6 +18,7 @@ type Shell struct {
 
 type Redirect struct {
 	Stdout string
+	Stderr string
 }
 
 func New(commands map[string]command.Command) *Shell {
@@ -70,7 +71,9 @@ func (s *Shell) Run() {
 
 		var (
 			oldStdout *os.File
+			oldStderr *os.File
 			outFile   *os.File
+			errFile   *os.File
 		)
 
 		if redir.Stdout != "" {
@@ -81,6 +84,20 @@ func (s *Shell) Run() {
 			}
 			oldStdout = os.Stdout
 			os.Stdout = outFile
+		}
+
+		if redir.Stderr != "" {
+			errFile, err = os.Create(redir.Stderr)
+			if err != nil {
+				fmt.Println(err)
+				if outFile != nil {
+					os.Stdout = oldStdout
+					outFile.Close()
+				}
+				continue
+			}
+			oldStderr = os.Stderr
+			os.Stderr = errFile
 		}
 
 		cmd, ok := s.commands[name]
@@ -108,6 +125,11 @@ func (s *Shell) Run() {
 		if outFile != nil {
 			os.Stdout = oldStdout
 			outFile.Close()
+		}
+
+		if errFile != nil {
+			os.Stderr = oldStderr
+			errFile.Close()
 		}
 
 		switch result {
@@ -218,14 +240,25 @@ func parseRedirect(tokens []string) (cmd string, args []string, redir Redirect, 
 	cmd = tokens[0]
 
 	for i := 1; i < len(tokens); i++ {
-		if tokens[i] == ">" || tokens[i] == "1>" {
+		switch tokens[i] {
+
+		case ">", "1>":
 			if i+1 >= len(tokens) {
 				return "", nil, redir, fmt.Errorf("syntax error near >")
 			}
 			redir.Stdout = tokens[i+1]
-			return cmd, args, redir, nil
+			i++ // saltar el filename
+
+		case "2>":
+			if i+1 >= len(tokens) {
+				return "", nil, redir, fmt.Errorf("syntax error near 2>")
+			}
+			redir.Stderr = tokens[i+1]
+			i++ // saltar el filename
+
+		default:
+			args = append(args, tokens[i])
 		}
-		args = append(args, tokens[i])
 	}
 
 	return cmd, args, redir, nil
