@@ -77,8 +77,15 @@ func (s *Shell) Run() {
 			errFile   *os.File
 		)
 
+		flags := os.O_CREATE | os.O_WRONLY
+		if redir.StdoutAppend {
+			flags |= os.O_APPEND
+		} else {
+			flags |= os.O_TRUNC
+		}
+
 		if redir.Stdout != "" {
-			outFile, err = os.Create(redir.Stdout)
+			outFile, err := os.OpenFile(redir.Stdout, flags, 0644)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -88,6 +95,7 @@ func (s *Shell) Run() {
 		}
 
 		if redir.Stderr != "" {
+
 			errFile, err = os.Create(redir.Stderr)
 			if err != nil {
 				fmt.Println(err)
