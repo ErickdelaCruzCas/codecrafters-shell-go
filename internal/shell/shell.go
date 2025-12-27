@@ -17,8 +17,9 @@ type Shell struct {
 }
 
 type Redirect struct {
-	Stdout string
-	Stderr string
+	Stdout       string
+	StdoutAppend bool
+	Stderr       string
 }
 
 func New(commands map[string]command.Command) *Shell {
@@ -255,6 +256,14 @@ func parseRedirect(tokens []string) (cmd string, args []string, redir Redirect, 
 			}
 			redir.Stderr = tokens[i+1]
 			i++ // saltar el filename
+
+		case ">>":
+			if i+1 >= len(tokens) {
+				return "", nil, redir, fmt.Errorf("syntax error near >>")
+			}
+			redir.Stdout = tokens[i+1]
+			redir.StdoutAppend = true
+			i++
 
 		default:
 			args = append(args, tokens[i])
