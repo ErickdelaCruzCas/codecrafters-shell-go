@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -10,9 +9,10 @@ import (
 	"syscall"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
+	"github.com/codecrafters-io/shell-starter-go/internal/editor"
 	"github.com/codecrafters-io/shell-starter-go/internal/lexer"
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
-	"github.com/codecrafters-io/shell-starter-go/internal/runtime"
+	shellruntime "github.com/codecrafters-io/shell-starter-go/internal/runtime"
 )
 
 type Shell struct {
@@ -31,34 +31,29 @@ func (s *Shell) Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	scanner := bufio.NewScanner(os.Stdin)
+	// scanner := bufio.NewScanner(os.Stdin)
+	editor := editor.New(s.builtinNames())
 
 	for {
-		fmt.Print("$ ")
-
-		if !scanner.Scan() {
-			return
-		}
-
-		line := scanner.Text()
-		tokens := lexer.Tokenizer(line)
-
-		name, args, redir, err := parser.ParseRedirect(tokens)
+		line, err := editor.ReadLine()
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		io := &runtime.IOContext{}
+		tokens := lexer.Tokenize(line)
+		name, args, redir, err := parser.ParseRedirect(tokens)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		io := &shellruntime.IOContext{}
 		if err := io.Apply(redir); err != nil {
 			fmt.Println(err)
 			continue
 		}
-
 		shouldExit := s.execute(ctx, name, args)
-
 		io.Restore()
-
 		if shouldExit {
 			return
 		}
@@ -108,4 +103,12 @@ func (*Shell) executeExternal(ctx context.Context, path string, args []string, n
 	externalCmd.Stdout = os.Stdout
 	externalCmd.Stderr = os.Stderr
 	_ = externalCmd.Run()
+}
+
+func (s *Shell) builtinNames() []string {
+	names := make([]string, 0, len(s.commands))
+	for name := range s.commands {
+		names = append(names, name)
+	}
+	return names
 }

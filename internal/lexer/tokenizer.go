@@ -4,7 +4,7 @@ package lexer
        TOKENIZER
 ========================= */
 
-func Tokenizer(line string) []string {
+func Tokenize(line string) []string {
 	const (
 		normal = iota
 		singleQuote
