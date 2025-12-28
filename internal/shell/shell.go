@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
@@ -31,7 +32,10 @@ func (s *Shell) Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	editor := editor.New(s.builtinNames())
+	candidates := s.builtinNames()
+	candidates = append(candidates, executablesInPath()...)
+
+	editor := editor.New(candidates)
 
 	for {
 		fmt.Print("$ ")
@@ -113,4 +117,43 @@ func (s *Shell) builtinNames() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+func executablesInPath() []string {
+	seen := make(map[string]struct{})
+	result := []string{}
+
+	pathEnv := os.Getenv("PATH")
+	dirs := filepath.SplitList(pathEnv)
+
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			name := entry.Name()
+			// fullPath := filepath.Join(dir, name)
+
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+
+			// Unix: ejecutable si tiene bit x
+			if info.Mode()&0111 != 0 {
+				if _, ok := seen[name]; !ok {
+					seen[name] = struct{}{}
+					result = append(result, name)
+				}
+			}
+		}
+	}
+
+	return result
 }

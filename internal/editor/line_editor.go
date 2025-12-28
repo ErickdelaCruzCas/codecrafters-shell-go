@@ -7,14 +7,15 @@ import (
 )
 
 type LineEditor struct {
-	buffer   []rune
-	builtins []string
+	buffer      []rune
+	candidates  []string
+	executables []string
 }
 
-func New(builtins []string) *LineEditor {
+func New(candidates []string) *LineEditor {
 	return &LineEditor{
-		buffer:   make([]rune, 0),
-		builtins: builtins,
+		buffer:     make([]rune, 0),
+		candidates: candidates,
 	}
 }
 
@@ -61,7 +62,7 @@ func (e *LineEditor) autocomplete() {
 	prefix := string(e.buffer)
 
 	matches := make([]string, 0)
-	for _, b := range e.builtins {
+	for _, b := range e.candidates {
 		if len(b) >= len(prefix) && b[:len(prefix)] == prefix {
 			matches = append(matches, b)
 		}
@@ -77,7 +78,6 @@ func (e *LineEditor) autocomplete() {
 		e.buffer = append(e.buffer, ' ')
 		os.Stdout.Write([]byte(" "))
 	} else if len(matches) == 0 {
-		os.Stdout.Write([]byte{0x07})
+		os.Stdout.Write([]byte{0x07}) // bell
 	}
-	// 0 o >1 → no hacer nada (por ahora)
 }
