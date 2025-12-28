@@ -74,6 +74,8 @@ func (e *LineEditor) autocomplete() {
 			e.buffer = append(e.buffer, r)
 			os.Stdout.Write([]byte(string(r)))
 		}
+		e.buffer = append(e.buffer, ' ')
+		os.Stdout.Write([]byte(" "))
 	}
 	// 0 o >1 → no hacer nada (por ahora)
 }
