@@ -35,6 +35,7 @@ func (s *Shell) Run() {
 	editor := editor.New(s.builtinNames())
 
 	for {
+		fmt.Print("$ ")
 		line, err := editor.ReadLine()
 		if err != nil {
 			fmt.Println(err)
