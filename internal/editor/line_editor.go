@@ -59,25 +59,56 @@ func (e *LineEditor) ReadLine() (string, error) {
 }
 
 func (e *LineEditor) autocomplete() {
-	prefix := string(e.buffer)
+	func (e *LineEditor) autocomplete() {
+	buf := string(e.buffer)
 
+	// 1. separar head y token activo
+	lastSpace := strings.LastIndex(buf, " ")
+
+	var head, token string
+	if lastSpace == -1 {
+		head = ""
+		token = buf
+	} else {
+		head = buf[:lastSpace+1] // incluye el espacio
+		token = buf[lastSpace+1:]
+	}
+
+	// 2. buscar matches sobre el token
 	matches := make([]string, 0)
-	for _, b := range e.candidates {
-		if len(b) >= len(prefix) && b[:len(prefix)] == prefix {
-			matches = append(matches, b)
+	for _, c := range e.candidates {
+		if strings.HasPrefix(c, token) {
+			matches = append(matches, c)
 		}
 	}
 
+	// 3. sin matches → bell
+	if len(matches) == 0 {
+		os.Stdout.Write([]byte{0x07})
+		return
+	}
+
+	// 4. único match → reemplazar token + espacio
 	if len(matches) == 1 {
-		// completar
-		rest := matches[0][len(prefix):]
-		for _, r := range rest {
+		match := matches[0]
+
+		// borrar token actual del buffer
+		e.buffer = []rune(head)
+
+		// escribir match completo
+		for _, r := range match {
 			e.buffer = append(e.buffer, r)
 			os.Stdout.Write([]byte(string(r)))
 		}
+
+		// añadir espacio final
 		e.buffer = append(e.buffer, ' ')
 		os.Stdout.Write([]byte(" "))
-	} else if len(matches) == 0 {
-		os.Stdout.Write([]byte{0x07}) // bell
+		return
 	}
+
+	// 5. múltiples matches → por ahora, no hacemos nada
+	// (más adelante se listan)
+}
+
 }
