@@ -36,6 +36,8 @@ func (s *Shell) Run() {
 
 	for {
 		fmt.Print("$ ")
+		os.Stdout.Sync()
+
 		line, err := editor.ReadLine()
 		if err != nil {
 			fmt.Println(err)
