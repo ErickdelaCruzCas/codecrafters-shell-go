@@ -65,12 +65,19 @@ func (e *LineEditor) autocomplete() {
 	// 1. separar head y token activo
 	lastSpace := strings.LastIndex(buf, " ")
 
-	var head, token string
+	// var head, token string
+	// if lastSpace == -1 {
+	// 	head = ""
+	// 	token = buf
+	// } else {
+	// 	head = buf[:lastSpace+1] // incluye el espacio
+	// 	token = buf[lastSpace+1:]
+	// }
+
+	var token string
 	if lastSpace == -1 {
-		head = ""
 		token = buf
 	} else {
-		head = buf[:lastSpace+1] // incluye el espacio
 		token = buf[lastSpace+1:]
 	}
 
