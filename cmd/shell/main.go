@@ -15,6 +15,7 @@
 // 	sh := shell.New(commands)
 
 // 	commands["type"] = command.NewTypeCommand(sh.IsBuiltin, sh.IsExecutable)
+// 	commands["cd"] = command.NewCdCommand(sh.ChangeDir)
 
 // 	sh.Run()
 // }
