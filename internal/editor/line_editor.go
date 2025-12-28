@@ -11,6 +11,8 @@ type LineEditor struct {
 	buffer      []rune
 	builtins    []string
 	executables []string
+
+	lastWasTab bool
 }
 
 func New(candidates []string, excutables []string) *LineEditor {
@@ -66,15 +68,6 @@ func (e *LineEditor) autocomplete() {
 	// 1. separar head y token activo
 	lastSpace := strings.LastIndex(buf, " ")
 
-	// var head, token string
-	// if lastSpace == -1 {
-	// 	head = ""
-	// 	token = buf
-	// } else {
-	// 	head = buf[:lastSpace+1] // incluye el espacio
-	// 	token = buf[lastSpace+1:]
-	// }
-
 	var token string
 	if lastSpace == -1 {
 		token = buf
@@ -125,5 +118,27 @@ func (e *LineEditor) autocomplete() {
 	}
 
 	// 5. múltiples matches → por ahora, no hacemos nada
-	// (más adelante se listan)
+	if len(matches) > 1 {
+		if !e.lastWasTab {
+			os.Stdout.Write([]byte{0x07})
+			e.lastWasTab = true
+			return
+		}
+		// salto de línea limpio (raw mode)
+		os.Stdout.Write([]byte("\r\n"))
+
+		for _, m := range matches {
+			os.Stdout.Write([]byte(m))
+			os.Stdout.Write([]byte("  "))
+		}
+
+		// nueva línea
+		os.Stdout.Write([]byte("\r\n"))
+
+		// redibujar prompt + buffer
+		os.Stdout.Write([]byte("$ "))
+		os.Stdout.Write([]byte(string(e.buffer)))
+
+		e.lastWasTab = false
+	}
 }
