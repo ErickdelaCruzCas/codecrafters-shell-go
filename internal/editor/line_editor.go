@@ -93,10 +93,10 @@ func (e *LineEditor) autocomplete() {
 		match := matches[0]
 
 		// borrar token actual del buffer
-		e.buffer = []rune(head)
+		suffix := match[len(token):]
 
 		// escribir match completo
-		for _, r := range match {
+		for _, r := range suffix {
 			e.buffer = append(e.buffer, r)
 			os.Stdout.Write([]byte(string(r)))
 		}
