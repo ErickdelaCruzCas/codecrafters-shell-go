@@ -31,7 +31,6 @@ func (s *Shell) Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// scanner := bufio.NewScanner(os.Stdin)
 	editor := editor.New(s.builtinNames())
 
 	for {

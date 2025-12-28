@@ -76,6 +76,8 @@ func (e *LineEditor) autocomplete() {
 		}
 		e.buffer = append(e.buffer, ' ')
 		os.Stdout.Write([]byte(" "))
+	} else if len(matches) == 0 {
+		os.Stdout.Write([]byte{0x07})
 	}
 	// 0 o >1 → no hacer nada (por ahora)
 }
