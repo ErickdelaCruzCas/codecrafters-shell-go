@@ -32,10 +32,7 @@ func (s *Shell) Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	candidates := s.builtinNames()
-	candidates = append(candidates, executablesInPath()...)
-
-	editor := editor.New(candidates)
+	editor := editor.New(s.builtinNames(), s.executablesInPath())
 
 	for {
 		fmt.Print("$ ")
@@ -119,7 +116,7 @@ func (s *Shell) builtinNames() []string {
 	return names
 }
 
-func executablesInPath() []string {
+func (s *Shell) executablesInPath() []string {
 	seen := make(map[string]struct{})
 	result := []string{}
 

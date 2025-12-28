@@ -9,14 +9,15 @@ import (
 
 type LineEditor struct {
 	buffer      []rune
-	candidates  []string
+	builtins    []string
 	executables []string
 }
 
-func New(candidates []string) *LineEditor {
+func New(candidates []string, excutables []string) *LineEditor {
 	return &LineEditor{
-		buffer:     make([]rune, 0),
-		candidates: candidates,
+		buffer:      make([]rune, 0),
+		builtins:    candidates,
+		executables: excutables,
 	}
 }
 
@@ -81,11 +82,20 @@ func (e *LineEditor) autocomplete() {
 		token = buf[lastSpace+1:]
 	}
 
-	// 2. buscar matches sobre el token
+	// 2. buscar primero en builtins
 	matches := make([]string, 0)
-	for _, c := range e.candidates {
+	for _, c := range e.builtins {
 		if strings.HasPrefix(c, token) {
 			matches = append(matches, c)
+		}
+	}
+
+	// si no hay matches en builtins, buscar en ejecutables
+	if len(matches) == 0 {
+		for _, c := range e.executables {
+			if strings.HasPrefix(c, token) {
+				matches = append(matches, c)
+			}
 		}
 	}
 
