@@ -2,6 +2,7 @@ package editor
 
 import (
 	"os"
+	"sort"
 	"strings"
 
 	"golang.org/x/term"
@@ -166,6 +167,8 @@ func longestCommonPrefix(candidates []string) string {
 
 func (e *LineEditor) listCandidates(matches []string) {
 	os.Stdout.Write([]byte("\r\n"))
+
+	sort.Strings(matches)
 
 	for _, m := range matches {
 		os.Stdout.Write([]byte(m))
