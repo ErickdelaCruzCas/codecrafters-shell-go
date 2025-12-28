@@ -38,7 +38,7 @@ func (e *LineEditor) ReadLine() (string, error) {
 		switch b[0] {
 
 		case '\n', '\r':
-			os.Stdout.Write([]byte("\n"))
+			os.Stdout.Write([]byte("\r\n"))
 			return string(e.buffer), nil
 
 		case '\t':
