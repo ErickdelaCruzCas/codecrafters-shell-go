@@ -2,6 +2,7 @@ package editor
 
 import (
 	"os"
+	"strings"
 
 	"golang.org/x/term"
 )
@@ -59,7 +60,6 @@ func (e *LineEditor) ReadLine() (string, error) {
 }
 
 func (e *LineEditor) autocomplete() {
-	func (e *LineEditor) autocomplete() {
 	buf := string(e.buffer)
 
 	// 1. separar head y token activo
@@ -109,6 +109,4 @@ func (e *LineEditor) autocomplete() {
 
 	// 5. múltiples matches → por ahora, no hacemos nada
 	// (más adelante se listan)
-}
-
 }
