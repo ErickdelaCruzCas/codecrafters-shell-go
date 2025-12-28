@@ -119,26 +119,65 @@ func (e *LineEditor) autocomplete() {
 
 	// 5. múltiples matches → por ahora, no hacemos nada
 	if len(matches) > 1 {
+
+		lcp := longestCommonPrefix(matches)
+
+		// ¿el LCP añade algo nuevo?
+		if len(lcp) > len(token) {
+			suffix := lcp[len(token):]
+
+			for _, r := range suffix {
+				e.buffer = append(e.buffer, r)
+				os.Stdout.Write([]byte(string(r)))
+			}
+
+			e.lastWasTab = false
+			return
+		}
+
 		if !e.lastWasTab {
 			os.Stdout.Write([]byte{0x07})
 			e.lastWasTab = true
 			return
 		}
 		// salto de línea limpio (raw mode)
-		os.Stdout.Write([]byte("\r\n"))
-
-		for _, m := range matches {
-			os.Stdout.Write([]byte(m))
-			os.Stdout.Write([]byte("  "))
-		}
-
-		// nueva línea
-		os.Stdout.Write([]byte("\r\n"))
-
-		// redibujar prompt + buffer
-		os.Stdout.Write([]byte("$ "))
-		os.Stdout.Write([]byte(string(e.buffer)))
-
-		e.lastWasTab = false
+		e.listCandidates(matches)
 	}
+}
+
+func longestCommonPrefix(candidates []string) string {
+	if len(candidates) == 0 {
+		return ""
+	}
+
+	prefix := candidates[0]
+
+	for _, s := range candidates[1:] {
+		for !strings.HasPrefix(s, prefix) {
+			if prefix == "" {
+				return ""
+			}
+			prefix = prefix[:len(prefix)-1]
+		}
+	}
+
+	return prefix
+}
+
+func (e *LineEditor) listCandidates(matches []string) {
+	os.Stdout.Write([]byte("\r\n"))
+
+	for _, m := range matches {
+		os.Stdout.Write([]byte(m))
+		os.Stdout.Write([]byte("  "))
+	}
+
+	// nueva línea
+	os.Stdout.Write([]byte("\r\n"))
+
+	// redibujar prompt + buffer
+	os.Stdout.Write([]byte("$ "))
+	os.Stdout.Write([]byte(string(e.buffer)))
+
+	e.lastWasTab = false
 }
