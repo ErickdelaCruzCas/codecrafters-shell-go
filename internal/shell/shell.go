@@ -8,11 +8,13 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"syscall"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/editor"
+	"github.com/codecrafters-io/shell-starter-go/internal/history"
 	"github.com/codecrafters-io/shell-starter-go/internal/lexer"
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
 	shellruntime "github.com/codecrafters-io/shell-starter-go/internal/runtime"
@@ -20,6 +22,7 @@ import (
 
 type Shell struct {
 	commands map[string]command.Command
+	history  *history.Store
 }
 
 type runner struct {
@@ -34,8 +37,11 @@ type pipeSetup struct {
 	closePipe  bool
 }
 
-func New(commands map[string]command.Command) *Shell {
-	return &Shell{commands: commands}
+func New(commands map[string]command.Command, historyStore *history.Store) *Shell {
+	return &Shell{
+		commands: commands,
+		history:  historyStore,
+	}
 }
 
 /* =========================
@@ -56,6 +62,10 @@ func (s *Shell) Run() {
 		if err != nil {
 			fmt.Println(err)
 			continue
+		}
+
+		if s.history != nil && strings.TrimSpace(line) != "" {
+			s.history.Add(line)
 		}
 
 		tokens := lexer.Tokenize(line)
