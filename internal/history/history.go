@@ -43,8 +43,11 @@ func (s *Store) LoadFrom(path string) error {
 		return err
 	}
 
-	s.entries = entries
-	s.lastSaved = len(entries)
+	wasFullySaved := s.lastSaved == len(s.entries)
+	s.entries = append(s.entries, entries...)
+	if wasFullySaved {
+		s.lastSaved = len(s.entries)
+	}
 	return nil
 }
 
