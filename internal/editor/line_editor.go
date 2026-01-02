@@ -14,6 +14,9 @@ type LineEditor struct {
 	executables []string
 
 	lastWasTab bool
+	history    []string
+	histIndex  int
+	savedInput []rune
 }
 
 func New(candidates []string, excutables []string) *LineEditor {
@@ -21,6 +24,14 @@ func New(candidates []string, excutables []string) *LineEditor {
 		buffer:      make([]rune, 0),
 		builtins:    candidates,
 		executables: excutables,
+		histIndex:   -1,
+	}
+}
+
+func (e *LineEditor) SetHistory(entries []string) {
+	e.history = entries
+	if e.histIndex >= len(entries) {
+		e.histIndex = -1
 	}
 }
 
@@ -34,6 +45,8 @@ func (e *LineEditor) ReadLine() (string, error) {
 	defer term.Restore(fd, oldState)
 
 	e.buffer = e.buffer[:0]
+	e.histIndex = -1
+	e.savedInput = nil
 
 	for {
 		var b [1]byte
@@ -42,6 +55,19 @@ func (e *LineEditor) ReadLine() (string, error) {
 		}
 
 		switch b[0] {
+		case 27: // ESC
+			seq, err := e.readEscapeSeq()
+			if err != nil {
+				return "", err
+			}
+			if len(seq) == 2 && seq[0] == '[' {
+				switch seq[1] {
+				case 'A':
+					e.historyUp()
+				case 'B':
+					e.historyDown()
+				}
+			}
 
 		case '\n', '\r':
 			os.Stdout.Write([]byte("\r\n"))
@@ -61,6 +87,54 @@ func (e *LineEditor) ReadLine() (string, error) {
 			os.Stdout.Write(b[:])
 		}
 	}
+}
+
+func (e *LineEditor) readEscapeSeq() ([]byte, error) {
+	buf := make([]byte, 2)
+	for i := 0; i < 2; i++ {
+		var b [1]byte
+		if _, err := os.Stdin.Read(b[:]); err != nil {
+			return nil, err
+		}
+		buf[i] = b[0]
+	}
+	return buf, nil
+}
+
+func (e *LineEditor) historyUp() {
+	if len(e.history) == 0 {
+		return
+	}
+	if e.histIndex == -1 {
+		e.savedInput = append([]rune(nil), e.buffer...)
+		e.histIndex = len(e.history) - 1
+	} else if e.histIndex > 0 {
+		e.histIndex--
+	}
+	e.buffer = []rune(e.history[e.histIndex])
+	e.redraw()
+}
+
+func (e *LineEditor) historyDown() {
+	if e.histIndex == -1 {
+		return
+	}
+	if e.histIndex < len(e.history)-1 {
+		e.histIndex++
+		e.buffer = []rune(e.history[e.histIndex])
+		e.redraw()
+		return
+	}
+	e.histIndex = -1
+	e.buffer = append([]rune(nil), e.savedInput...)
+	e.redraw()
+}
+
+func (e *LineEditor) redraw() {
+	os.Stdout.Write([]byte("\r\033[K"))
+	os.Stdout.Write([]byte("$ "))
+	os.Stdout.Write([]byte(string(e.buffer)))
+	e.lastWasTab = false
 }
 
 func (e *LineEditor) autocomplete() {

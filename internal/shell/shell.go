@@ -58,6 +58,10 @@ func (s *Shell) Run() {
 		fmt.Print("$ ")
 		os.Stdout.Sync()
 
+		if s.history != nil {
+			editor.SetHistory(s.history.List())
+		}
+
 		line, err := editor.ReadLine()
 		if err != nil {
 			fmt.Println(err)
