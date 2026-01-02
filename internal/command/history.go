@@ -23,6 +23,26 @@ func (h HistoryCommand) Name() string {
 }
 
 func (h HistoryCommand) Execute(ctx context.Context, args []string, io IO) Result {
+	if len(args) >= 2 {
+		switch args[0] {
+		case "-r":
+			if err := h.store.LoadFrom(args[1]); err != nil {
+				fmt.Fprintln(io.Stderr, err)
+			}
+			return Ok
+		case "-w":
+			if err := h.store.WriteTo(args[1]); err != nil {
+				fmt.Fprintln(io.Stderr, err)
+			}
+			return Ok
+		case "-a":
+			if err := h.store.AppendTo(args[1]); err != nil {
+				fmt.Fprintln(io.Stderr, err)
+			}
+			return Ok
+		}
+	}
+
 	entries := h.store.List()
 	start := 0
 	if len(args) > 0 {
