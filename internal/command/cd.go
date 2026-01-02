@@ -21,7 +21,7 @@ func (c CdCommand) Name() string {
 	return "cd"
 }
 
-func (c CdCommand) Execute(ctx context.Context, args []string) Result {
+func (c CdCommand) Execute(ctx context.Context, args []string, io IO) Result {
 
 	if len(args) == 0 {
 		// de momento no hacemos nada
@@ -35,7 +35,7 @@ func (c CdCommand) Execute(ctx context.Context, args []string) Result {
 	}
 
 	if err := c.changeDir(path); err != nil {
-		fmt.Printf("cd: %s: No such file or directory\n", path)
+		fmt.Fprintf(io.Stdout, "cd: %s: No such file or directory\n", path)
 		return Ok
 	}
 

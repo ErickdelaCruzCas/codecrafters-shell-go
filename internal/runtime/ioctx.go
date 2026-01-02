@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"io"
 	"os"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
@@ -11,10 +12,19 @@ import (
 ========================= */
 
 type IOContext struct {
-	oldStdout *os.File
-	oldStderr *os.File
-	outFile   *os.File
-	errFile   *os.File
+	Stdin   io.Reader
+	Stdout  io.Writer
+	Stderr  io.Writer
+	outFile *os.File
+	errFile *os.File
+}
+
+func NewIOContext() *IOContext {
+	return &IOContext{
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
 }
 
 func (io *IOContext) Apply(redir parser.Redirect) error {
@@ -31,9 +41,8 @@ func (io *IOContext) Apply(redir parser.Redirect) error {
 		if err != nil {
 			return err
 		}
-		io.oldStdout = os.Stdout
 		io.outFile = f
-		os.Stdout = f
+		io.Stdout = f
 	}
 
 	// stderr
@@ -47,25 +56,22 @@ func (io *IOContext) Apply(redir parser.Redirect) error {
 
 		f, err := os.OpenFile(redir.Stderr, flags, 0644)
 		if err != nil {
-			io.Restore()
+			io.Close()
 			return err
 		}
-		io.oldStderr = os.Stderr
 		io.errFile = f
-		os.Stderr = f
+		io.Stderr = f
 	}
 
 	return nil
 }
 
-func (io *IOContext) Restore() {
+func (io *IOContext) Close() {
 	if io.errFile != nil {
-		os.Stderr = io.oldStderr
 		io.errFile.Close()
 		io.errFile = nil
 	}
 	if io.outFile != nil {
-		os.Stdout = io.oldStdout
 		io.outFile.Close()
 		io.outFile = nil
 	}

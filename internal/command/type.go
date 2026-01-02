@@ -24,7 +24,7 @@ func (c TypeCommand) Name() string {
 	return "type"
 }
 
-func (c TypeCommand) Execute(ctx context.Context, args []string) Result {
+func (c TypeCommand) Execute(ctx context.Context, args []string, io IO) Result {
 	if len(args) == 0 {
 		return Ok
 	}
@@ -32,16 +32,16 @@ func (c TypeCommand) Execute(ctx context.Context, args []string) Result {
 	name := args[0]
 
 	if c.isBuiltin(name) {
-		fmt.Printf("%s is a shell builtin\n", name)
+		fmt.Fprintf(io.Stdout, "%s is a shell builtin\n", name)
 		return Ok
 	}
 
 	path, ok := c.isExecutable(name)
 	if ok {
-		fmt.Printf("%s is %s\n", name, path)
+		fmt.Fprintf(io.Stdout, "%s is %s\n", name, path)
 		return Ok
 	}
 
-	fmt.Printf("%s: not found\n", name)
+	fmt.Fprintf(io.Stdout, "%s: not found\n", name)
 	return Ok
 }

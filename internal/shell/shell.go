@@ -3,10 +3,12 @@ package shell
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
@@ -18,6 +20,18 @@ import (
 
 type Shell struct {
 	commands map[string]command.Command
+}
+
+type runner struct {
+	start func() error
+	wait  func()
+}
+
+type pipeSetup struct {
+	ioCtx      *shellruntime.IOContext
+	pipeWriter *io.PipeWriter
+	closeStdin io.Closer
+	closePipe  bool
 }
 
 func New(commands map[string]command.Command) *Shell {
@@ -45,18 +59,15 @@ func (s *Shell) Run() {
 		}
 
 		tokens := lexer.Tokenize(line)
-		name, args, redir, err := parser.ParseRedirect(tokens)
+		commands, err := parser.ParsePipeline(tokens)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		io := &shellruntime.IOContext{}
-		if err := io.Apply(redir); err != nil {
-			fmt.Println(err)
+		if len(commands) == 0 {
 			continue
 		}
-		shouldExit := s.execute(ctx, name, args)
-		io.Restore()
+		shouldExit := s.executePipeline(ctx, commands)
 		if shouldExit {
 			return
 		}
@@ -67,19 +78,158 @@ func (s *Shell) Run() {
       EXECUTION
 ========================= */
 
-func (s *Shell) execute(ctx context.Context, name string, args []string) bool {
-	if cmd, ok := s.commands[name]; ok {
-		result := cmd.Execute(ctx, args)
-		return result == command.Exit
+func (s *Shell) executePipeline(ctx context.Context, pipeline []parser.CommandLine) bool {
+	var exitRequested int32
+
+	runners := make([]runner, 0, len(pipeline))
+
+	var prevReader io.Reader = os.Stdin
+
+	for i, cmdLine := range pipeline {
+		var pipeReader *io.PipeReader
+		var pipeWriter *io.PipeWriter
+		if i < len(pipeline)-1 {
+			pipeReader, pipeWriter = io.Pipe()
+		}
+
+		setup, err := s.preparePipelineIO(prevReader, pipeWriter, cmdLine.Redir)
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+
+		if builtin, ok := s.commands[cmdLine.Name]; ok {
+			runners = append(runners, s.newBuiltinRunner(ctx, builtin, cmdLine.Args, setup, &exitRequested))
+		} else if path, ok := s.IsExecutable(cmdLine.Name); ok {
+			runners = append(runners, s.newExternalRunner(ctx, path, cmdLine.Args, cmdLine.Name, setup))
+		} else {
+			fmt.Println(cmdLine.Name + ": command not found")
+			if setup.pipeWriter != nil {
+				setup.pipeWriter.Close()
+			}
+			setup.ioCtx.Close()
+			return false
+		}
+
+		if pipeReader != nil {
+			prevReader = pipeReader
+		}
 	}
 
-	if path, ok := s.IsExecutable(name); ok {
-		s.executeExternal(ctx, path, args, name)
-		return false
+	for i, r := range runners {
+		if err := r.start(); err != nil {
+			fmt.Println(err)
+			for j := 0; j < i; j++ {
+				runners[j].wait()
+			}
+			return false
+		}
 	}
 
-	fmt.Println(name + ": command not found")
-	return false
+	for _, r := range runners {
+		r.wait()
+	}
+
+	return atomic.LoadInt32(&exitRequested) == 1
+}
+
+func (s *Shell) preparePipelineIO(prevReader io.Reader, pipeWriter *io.PipeWriter, redir parser.Redirect) (pipeSetup, error) {
+	ioCtx := shellruntime.NewIOContext()
+	ioCtx.Stdin = prevReader
+	if pipeWriter != nil {
+		ioCtx.Stdout = pipeWriter
+	}
+	if err := ioCtx.Apply(redir); err != nil {
+		if pipeWriter != nil {
+			pipeWriter.Close()
+		}
+		ioCtx.Close()
+		return pipeSetup{}, err
+	}
+
+	if pipeWriter != nil && ioCtx.Stdout != pipeWriter {
+		pipeWriter.Close()
+		pipeWriter = nil
+	}
+
+	var closeStdin io.Closer
+	if r, ok := prevReader.(*io.PipeReader); ok {
+		closeStdin = r
+	}
+
+	closePipe := pipeWriter != nil && ioCtx.Stdout == pipeWriter
+
+	return pipeSetup{
+		ioCtx:      ioCtx,
+		pipeWriter: pipeWriter,
+		closeStdin: closeStdin,
+		closePipe:  closePipe,
+	}, nil
+}
+
+func (s *Shell) closePipelineIO(setup pipeSetup) {
+	if setup.closePipe {
+		setup.pipeWriter.Close()
+	}
+	if setup.closeStdin != nil {
+		setup.closeStdin.Close()
+	}
+	setup.ioCtx.Close()
+}
+
+func (s *Shell) newBuiltinRunner(
+	ctx context.Context,
+	builtin command.Command,
+	args []string,
+	setup pipeSetup,
+	exitFlag *int32,
+) runner {
+	done := make(chan command.Result, 1)
+
+	return runner{
+		start: func() error {
+			go func() {
+				result := builtin.Execute(ctx, args, command.IO{
+					Stdin:  setup.ioCtx.Stdin,
+					Stdout: setup.ioCtx.Stdout,
+					Stderr: setup.ioCtx.Stderr,
+				})
+				if result == command.Exit {
+					atomic.StoreInt32(exitFlag, 1)
+				}
+				s.closePipelineIO(setup)
+				done <- result
+			}()
+			return nil
+		},
+		wait: func() {
+			<-done
+		},
+	}
+}
+
+func (s *Shell) newExternalRunner(
+	ctx context.Context,
+	path string,
+	args []string,
+	name string,
+	setup pipeSetup,
+) runner {
+	externalCmd := exec.CommandContext(ctx, path, args...)
+	externalCmd.Args[0] = name
+	externalCmd.Stdin = setup.ioCtx.Stdin
+	externalCmd.Stdout = setup.ioCtx.Stdout
+	externalCmd.Stderr = setup.ioCtx.Stderr
+
+	return runner{
+		start: func() error {
+			return externalCmd.Start()
+		},
+		wait: func() {
+			_ = externalCmd.Wait()
+			s.closePipelineIO(setup)
+		},
+	}
 }
 
 func (s *Shell) IsBuiltin(name string) bool {
@@ -97,15 +247,6 @@ func (s *Shell) IsExecutable(name string) (string, bool) {
 
 func (s *Shell) ChangeDir(path string) error {
 	return os.Chdir(path)
-}
-
-func (*Shell) executeExternal(ctx context.Context, path string, args []string, name string) {
-	externalCmd := exec.CommandContext(ctx, path, args...)
-	externalCmd.Args[0] = name
-	externalCmd.Stdin = os.Stdin
-	externalCmd.Stdout = os.Stdout
-	externalCmd.Stderr = os.Stderr
-	_ = externalCmd.Run()
 }
 
 func (s *Shell) builtinNames() []string {

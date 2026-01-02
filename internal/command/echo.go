@@ -12,7 +12,7 @@ func (c EchoCommand) Name() string {
 	return "echo"
 }
 
-func (c EchoCommand) Execute(ctx context.Context, args []string) Result {
-	fmt.Println(strings.Join(args, " "))
+func (c EchoCommand) Execute(ctx context.Context, args []string, io IO) Result {
+	fmt.Fprintln(io.Stdout, strings.Join(args, " "))
 	return Ok
 }

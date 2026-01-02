@@ -26,6 +26,12 @@ func Tokenize(line string) []string {
 			case '\\':
 				prevState = normal
 				state = escape
+			case '|':
+				if token != "" {
+					tokens = append(tokens, token)
+					token = ""
+				}
+				tokens = append(tokens, "|")
 			case ' ':
 				if token != "" {
 					tokens = append(tokens, token)

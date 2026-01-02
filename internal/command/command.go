@@ -1,6 +1,9 @@
 package command
 
-import "context"
+import (
+	"context"
+	"io"
+)
 
 type Result int
 
@@ -12,5 +15,11 @@ const (
 
 type Command interface {
 	Name() string
-	Execute(ctx context.Context, args []string) Result
+	Execute(ctx context.Context, args []string, io IO) Result
+}
+
+type IO struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
 }

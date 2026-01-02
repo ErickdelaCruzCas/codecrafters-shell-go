@@ -12,8 +12,8 @@ func (c PwdCommand) Name() string {
 	return "pwd"
 }
 
-func (c PwdCommand) Execute(ctx context.Context, args []string) Result {
+func (c PwdCommand) Execute(ctx context.Context, args []string, io IO) Result {
 	currentWorkingDirectory, _ := os.Getwd()
-	fmt.Println(currentWorkingDirectory)
+	fmt.Fprintln(io.Stdout, currentWorkingDirectory)
 	return Ok
 }
